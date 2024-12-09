@@ -7,6 +7,7 @@ pub enum EColor {
     Purple,
     Cyan,
     White,
+    Black,
     Uncolored,
 }
 
@@ -20,12 +21,13 @@ impl EColor {
             EColor::Purple => "p".to_string(),
             EColor::Cyan => "c".to_string(),
             EColor::White => "w".to_string(),
+            EColor::Black => "k".to_string(),
             EColor::Uncolored => "u".to_string(),
         }
     }
 
     pub fn try_from_string(s: &str) -> Option<EColor> {
-        match s {
+        match s.to_lowercase().as_str() {
             "r" => Some(EColor::Red),
             "g" => Some(EColor::Green),
             "b" => Some(EColor::Blue),
@@ -33,7 +35,8 @@ impl EColor {
             "p" => Some(EColor::Purple),
             "c" => Some(EColor::Cyan),
             "w" => Some(EColor::White),
-            "u" => Some(EColor::Uncolored),
+            "k" => Some(EColor::Black),
+            "u" | "-" => Some(EColor::Uncolored),
             _ => None,
         }
     }
@@ -45,6 +48,7 @@ pub enum EShape {
     Rectangle,
     Windmill,
     Star,
+    Pin,
 }
 
 impl EShape {
@@ -54,15 +58,17 @@ impl EShape {
             EShape::Rectangle => "R".to_string(),
             EShape::Windmill => "W".to_string(),
             EShape::Star => "S".to_string(),
+            EShape::Pin => "P".to_string(),
         }
     }
 
     pub fn try_from_string(s: &str) -> Option<EShape> {
-        match s {
+        match s.to_uppercase().as_str() {
             "C" => Some(EShape::Circle),
             "R" => Some(EShape::Rectangle),
             "W" => Some(EShape::Windmill),
             "S" => Some(EShape::Star),
+            "P" => Some(EShape::Pin),
             _ => None,
         }
     }
@@ -151,7 +157,7 @@ impl Shape {
         let binding = self.to_string();
         let encoded = urlencoding::encode(&binding);
         format!(
-            "https://community-vortex.shapez2.com/shape?identifier={}&extend=true&expand=true",
+            "https://community-vortex.shapez2.com/shape?identifier={}&extend=false&expand=false",
             encoded
         )
     }
