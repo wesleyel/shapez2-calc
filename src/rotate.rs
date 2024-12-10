@@ -1,5 +1,6 @@
 use crate::shape::{Shape, SingleItem, SHAPEZ2_DEMENTION, SHAPEZ2_LAYER};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RotateAngle {
     Clockwise90,
     Clockwise180,
@@ -9,7 +10,7 @@ pub enum RotateAngle {
     CounterClockwise270,
 }
 
-trait Rotatable {
+pub trait Rotatable {
     fn rotated(&mut self, angle: RotateAngle);
     fn rotate(&self, angle: RotateAngle) -> Self;
     fn rotate_clockwise_90(&self) -> Self;

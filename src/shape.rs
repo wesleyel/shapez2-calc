@@ -157,7 +157,14 @@ impl Distribution<SingleItem> for rand::distributions::Standard {
         }
     }
 }
-
+/// Shape is a 4x4 matrix of SingleItem
+/// 
+/// ```plaintext
+///  Layer 0
+///   3 | 0
+///   -----
+///   2 | 1
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Shape {
     pub items: [[SingleItem; SHAPEZ2_DEMENTION]; SHAPEZ2_LAYER],

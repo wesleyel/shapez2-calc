@@ -1,7 +1,5 @@
-use shape::Shape;
+use shapez2_calc::shape::Shape;
 
-mod rotate;
-mod shape;
 
 fn main() {
     for _ in 0..10 {

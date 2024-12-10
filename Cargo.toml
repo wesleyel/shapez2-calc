@@ -3,6 +3,10 @@ name = "shapez2-calc"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "shapez2-calc"
+path = "src/main.rs"
+
 [dependencies]
 rand = "0.8.5"
 urlencoding = "2.1.3"
