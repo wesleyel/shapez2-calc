@@ -15,6 +15,12 @@ pub trait Rotatable {
     fn rotate(&self, angle: RotateAngle) -> Self;
     fn rotate_clockwise_90(&self) -> Self;
     fn rotate_counter_clockwise_90(&self) -> Self;
+    fn rotate_180(&self) -> Self
+    where
+        Self: Sized,
+    {
+        self.rotate_clockwise_90().rotate_clockwise_90()
+    }
 }
 
 impl Rotatable for Shape {
@@ -45,12 +51,10 @@ impl Rotatable for Shape {
     fn rotate(&self, angle: RotateAngle) -> Self {
         match angle {
             RotateAngle::Clockwise90 => self.rotate_clockwise_90(),
-            RotateAngle::Clockwise180 => self.rotate_clockwise_90().rotate_clockwise_90(),
+            RotateAngle::Clockwise180 => self.rotate_180(),
             RotateAngle::Clockwise270 => self.rotate_counter_clockwise_90(),
             RotateAngle::CounterClockwise90 => self.rotate_counter_clockwise_90(),
-            RotateAngle::CounterClockwise180 => self
-                .rotate_counter_clockwise_90()
-                .rotate_counter_clockwise_90(),
+            RotateAngle::CounterClockwise180 => self.rotate_180(),
             RotateAngle::CounterClockwise270 => self.rotate_clockwise_90(),
         }
     }
