@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use rand::prelude::Distribution;
 
 pub const SHAPEZ2_DEMENTION: usize = 4;
@@ -18,21 +20,6 @@ pub enum EColor {
 }
 
 impl EColor {
-    pub fn to_string(&self) -> String {
-        match self {
-            EColor::Red => "r".to_string(),
-            EColor::Green => "g".to_string(),
-            EColor::Blue => "b".to_string(),
-            EColor::Yellow => "y".to_string(),
-            EColor::Magenta => "m".to_string(),
-            EColor::Cyan => "c".to_string(),
-            EColor::White => "w".to_string(),
-            EColor::Black => "k".to_string(),
-            EColor::Uncolored => "u".to_string(),
-            EColor::Empty => "-".to_string(),
-        }
-    }
-
     pub fn try_from_string(s: &str) -> Option<EColor> {
         match s.to_lowercase().as_str() {
             "r" => Some(EColor::Red),
@@ -47,6 +34,24 @@ impl EColor {
             "-" => Some(EColor::Empty),
             _ => None,
         }
+    }
+}
+
+impl Display for EColor {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            EColor::Red => "r".to_string(),
+            EColor::Green => "g".to_string(),
+            EColor::Blue => "b".to_string(),
+            EColor::Yellow => "y".to_string(),
+            EColor::Magenta => "m".to_string(),
+            EColor::Cyan => "c".to_string(),
+            EColor::White => "w".to_string(),
+            EColor::Black => "k".to_string(),
+            EColor::Uncolored => "u".to_string(),
+            EColor::Empty => "-".to_string(),
+        };
+        write!(f, "{}", s)
     }
 }
 
@@ -78,17 +83,6 @@ pub enum EShape {
 }
 
 impl EShape {
-    pub fn to_string(&self) -> String {
-        match self {
-            EShape::Circle => "C".to_string(),
-            EShape::Rectangle => "R".to_string(),
-            EShape::Windmill => "W".to_string(),
-            EShape::Star => "S".to_string(),
-            EShape::Pin => "P".to_string(),
-            EShape::Empty => "-".to_string(),
-        }
-    }
-
     pub fn try_from_string(s: &str) -> Option<EShape> {
         match s.to_uppercase().as_str() {
             "C" => Some(EShape::Circle),
@@ -99,6 +93,20 @@ impl EShape {
             "-" => Some(EShape::Empty),
             _ => None,
         }
+    }
+}
+
+impl Display for EShape {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            EShape::Circle => "C".to_string(),
+            EShape::Rectangle => "R".to_string(),
+            EShape::Windmill => "W".to_string(),
+            EShape::Star => "S".to_string(),
+            EShape::Pin => "P".to_string(),
+            EShape::Empty => "-".to_string(),
+        };
+        write!(f, "{}", s)
     }
 }
 
@@ -120,18 +128,17 @@ pub struct SingleItem {
     shape: EShape,
 }
 
+impl Default for SingleItem {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SingleItem {
     pub fn new() -> SingleItem {
         SingleItem {
             color: EColor::Empty,
             shape: EShape::Empty,
-        }
-    }
-
-    pub fn to_string(&self) -> String {
-        match (self.shape, self.color) {
-            (EShape::Empty, EColor::Empty) => "--".to_string(),
-            _ => format!("{}{}", self.shape.to_string(), self.color.to_string()),
         }
     }
 
@@ -146,6 +153,15 @@ impl SingleItem {
             shape: EShape::try_from_string(shape_code)?,
             color: EColor::try_from_string(color_code)?,
         })
+    }
+}
+
+impl Display for SingleItem {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match (self.shape, self.color) {
+            (EShape::Empty, EColor::Empty) => write!(f, "--"),
+            _ => write!(f, "{}{}", self.shape, self.color),
+        }
     }
 }
 
@@ -168,6 +184,12 @@ impl Distribution<SingleItem> for rand::distributions::Standard {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Shape {
     pub items: [[SingleItem; SHAPEZ2_DEMENTION]; SHAPEZ2_LAYER],
+}
+
+impl Default for Shape {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Shape {
@@ -204,7 +226,7 @@ impl Shape {
         shape
     }
 
-    pub fn to_string(&self) -> String {
+    pub fn to_minify_string(&self) -> String {
         let mut result = self.to_raw_string();
         const EMPTY_LAYER: &str = ":--------";
         const EMPTY_ITEM: &str = "--";
@@ -240,7 +262,7 @@ impl Shape {
                 result.push_str(&self.items[i][j].to_string());
             }
             if i != SHAPEZ2_LAYER - 1 {
-                result.push_str(":");
+                result.push(':');
             }
         }
         result
@@ -272,12 +294,18 @@ impl Shape {
     }
 
     pub fn to_shapez2_shape_viewer(&self) -> String {
-        let binding = self.to_string();
+        let binding = self.to_minify_string();
         let encoded = urlencoding::encode(&binding);
         format!(
             "https://community-vortex.shapez2.com/shape?identifier={}&extend=false&expand=false",
             encoded
         )
+    }
+}
+
+impl Display for Shape {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.to_minify_string())
     }
 }
 
@@ -334,13 +362,13 @@ mod tests {
     #[test]
     fn test_shape_to_string() {
         let mut shape = Shape::new();
-        assert_eq!(shape.to_string(), "".to_string());
+        assert_eq!(shape.to_minify_string(), "".to_string());
 
         shape.items[0][0] = SingleItem {
             color: EColor::Red,
             shape: EShape::Circle,
         };
-        assert_eq!(shape.to_string(), "Cr".to_string());
+        assert_eq!(shape.to_minify_string(), "Cr".to_string());
     }
 
     #[test]
@@ -386,7 +414,7 @@ mod tests {
     #[test]
     fn test_ramdom_shape_loopback_minify_string() {
         let shape = Shape::new_random();
-        let shape_str = shape.to_string();
+        let shape_str = shape.to_minify_string();
         assert_eq!(Shape::try_from_string(&shape_str), Some(shape));
     }
 }

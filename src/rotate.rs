@@ -25,11 +25,11 @@ pub trait Rotatable {
 
 impl Rotatable for Shape {
     fn rotate_clockwise_90(&self) -> Shape {
-        let mut shape = self.clone();
+        let mut shape = *self;
         let mut new_items = [[SingleItem::new(); SHAPEZ2_DEMENTION]; SHAPEZ2_LAYER];
         for i in 0..SHAPEZ2_LAYER {
-            for j in 0..SHAPEZ2_DEMENTION {
-                new_items[j][SHAPEZ2_DEMENTION - 1 - i] = self.items[i][j];
+            for (j, item) in new_items.iter_mut().enumerate().take(SHAPEZ2_DEMENTION) {
+                item[SHAPEZ2_DEMENTION - 1 - i] = self.items[i][j];
             }
         }
         shape.items = new_items;
@@ -37,7 +37,7 @@ impl Rotatable for Shape {
     }
 
     fn rotate_counter_clockwise_90(&self) -> Shape {
-        let mut shape = self.clone();
+        let mut shape = *self;
         let mut new_items = [[SingleItem::new(); SHAPEZ2_DEMENTION]; SHAPEZ2_LAYER];
         for i in 0..SHAPEZ2_LAYER {
             for j in 0..SHAPEZ2_DEMENTION {

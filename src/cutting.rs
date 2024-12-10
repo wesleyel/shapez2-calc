@@ -20,13 +20,13 @@ impl HalfDestroyable for Shape {
     }
 
     fn half_destroy(&self) -> Self {
-        let mut shape = self.clone();
+        let mut shape = *self;
         shape.half_destroyed();
         shape
     }
 }
 
-trait Cuttable {
+pub trait Cuttable {
     fn cutting(&self) -> [Self; 2]
     where
         Self: Sized;
@@ -40,7 +40,7 @@ impl Cuttable for Shape {
     }
 }
 
-trait Swapable {
+pub trait Swapable {
     fn swapd(a: &mut Self, b: &mut Self);
     fn swapd_with(&mut self, b: &mut Self);
     fn swap(a: &Self, b: &Self) -> [Self; 2]
@@ -53,8 +53,8 @@ trait Swapable {
 
 impl Swapable for Shape {
     fn swapd(a: &mut Self, b: &mut Self) {
-        let ori_a = a.clone();
-        let ori_b = b.clone();
+        let ori_a = *a;
+        let ori_b = *b;
         for i in 0..SHAPEZ2_LAYER {
             for j in 0..SHAPEZ2_DEMENTION {
                 if j * 2 / SHAPEZ2_DEMENTION > 0 {
@@ -70,8 +70,8 @@ impl Swapable for Shape {
     }
 
     fn swap(a: &Self, b: &Self) -> [Self; 2] {
-        let mut a = a.clone();
-        let mut b = b.clone();
+        let mut a = *a;
+        let mut b = *b;
         Self::swapd(&mut a, &mut b);
         [a, b]
     }
