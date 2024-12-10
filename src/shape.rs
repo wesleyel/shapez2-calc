@@ -6,7 +6,7 @@ use rand::prelude::Distribution;
 pub const SHAPEZ2_DEMENTION: usize = 4;
 pub const SHAPEZ2_LAYER: usize = 4;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum EColor {
     Red,
     Green,
@@ -73,7 +73,7 @@ impl Distribution<EColor> for rand::distributions::Standard {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum EShape {
     Circle,
     Rectangle,
@@ -123,7 +123,7 @@ impl Distribution<EShape> for rand::distributions::Standard {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct SingleItem {
     color: EColor,
     shape: EShape,
@@ -175,7 +175,7 @@ impl Distribution<SingleItem> for rand::distributions::Standard {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Index, IndexMut, IntoIterator, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Index, IndexMut, IntoIterator, Default)]
 pub struct SingleLayer {
     #[index]
     #[index_mut]
@@ -185,21 +185,14 @@ pub struct SingleLayer {
 
 impl SingleLayer {
     pub fn new_with_shape(shape: EShape) -> SingleLayer {
-        let layer = Self::default();
-        for mut item in layer.into_iter() {
-            item.shape = shape;
-            item.color = EColor::Uncolored;
-        }
-        layer
+        Self::new_with_shape_color(shape, EColor::Uncolored)
     }
 
     pub fn new_with_shape_color(shape: EShape, color: EColor) -> SingleLayer {
-        let layer = Self::default();
-        for mut item in layer.into_iter() {
-            item.shape = shape;
-            item.color = color;
+        let item = SingleItem { shape, color };
+        SingleLayer {
+            items: [item; SHAPEZ2_DEMENTION],
         }
-        layer
     }
 
     pub fn try_from_string(s: &str) -> Option<SingleLayer> {
@@ -276,7 +269,7 @@ impl Distribution<SingleLayer> for rand::distributions::Standard {
 ///   -----
 ///   2 | 1
 /// ```
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Index, IndexMut, IntoIterator, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Index, IndexMut, IntoIterator, Default)]
 pub struct Shape {
     #[index]
     #[index_mut]
