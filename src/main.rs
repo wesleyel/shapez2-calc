@@ -3,11 +3,9 @@ use types::Shape;
 mod types;
 
 fn main() {
-    let shape = Shape::try_from_string("WycwP-Rc:P-SyRbWy:RkSuWySy");
-    if let Some(shape) = shape {
+    for _ in 0..10 {
+        let shape = Shape::new_random();
         println!("{}", shape.to_string());
         println!("{}", shape.to_shapez2_shape_viewer());
-    } else {
-        println!("Invalid shape string");
     }
 }

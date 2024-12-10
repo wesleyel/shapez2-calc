@@ -1,3 +1,5 @@
+use rand::prelude::Distribution;
+
 const SHAPEZ2_DEMENTION: usize = 4;
 const SHAPEZ2_LAYER: usize = 4;
 
@@ -7,11 +9,12 @@ pub enum EColor {
     Green,
     Blue,
     Yellow,
-    Purple,
+    Magenta,
     Cyan,
     White,
     Black,
     Uncolored,
+    Empty,
 }
 
 impl EColor {
@@ -21,11 +24,12 @@ impl EColor {
             EColor::Green => "g".to_string(),
             EColor::Blue => "b".to_string(),
             EColor::Yellow => "y".to_string(),
-            EColor::Purple => "p".to_string(),
+            EColor::Magenta => "m".to_string(),
             EColor::Cyan => "c".to_string(),
             EColor::White => "w".to_string(),
             EColor::Black => "k".to_string(),
             EColor::Uncolored => "u".to_string(),
+            EColor::Empty => "-".to_string(),
         }
     }
 
@@ -35,12 +39,30 @@ impl EColor {
             "g" => Some(EColor::Green),
             "b" => Some(EColor::Blue),
             "y" => Some(EColor::Yellow),
-            "p" => Some(EColor::Purple),
+            "m" => Some(EColor::Magenta),
             "c" => Some(EColor::Cyan),
             "w" => Some(EColor::White),
             "k" => Some(EColor::Black),
             "u" => Some(EColor::Uncolored),
+            "-" => Some(EColor::Empty),
             _ => None,
+        }
+    }
+}
+
+impl Distribution<EColor> for rand::distributions::Standard {
+    fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> EColor {
+        match rng.gen_range(0..=9) {
+            0 => EColor::Red,
+            1 => EColor::Green,
+            2 => EColor::Blue,
+            3 => EColor::Yellow,
+            4 => EColor::Magenta,
+            5 => EColor::Cyan,
+            6 => EColor::White,
+            7 => EColor::Black,
+            8 => EColor::Uncolored,
+            _ => EColor::Empty,
         }
     }
 }
@@ -52,6 +74,7 @@ pub enum EShape {
     Windmill,
     Star,
     Pin,
+    Empty,
 }
 
 impl EShape {
@@ -62,6 +85,7 @@ impl EShape {
             EShape::Windmill => "W".to_string(),
             EShape::Star => "S".to_string(),
             EShape::Pin => "P".to_string(),
+            EShape::Empty => "-".to_string(),
         }
     }
 
@@ -72,23 +96,43 @@ impl EShape {
             "W" => Some(EShape::Windmill),
             "S" => Some(EShape::Star),
             "P" => Some(EShape::Pin),
+            "-" => Some(EShape::Empty),
             _ => None,
+        }
+    }
+}
+
+impl Distribution<EShape> for rand::distributions::Standard {
+    fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> EShape {
+        match rng.gen_range(0..=4) {
+            0 => EShape::Circle,
+            1 => EShape::Rectangle,
+            2 => EShape::Windmill,
+            3 => EShape::Star,
+            _ => EShape::Pin,
         }
     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SingleItem {
-    color: Option<EColor>,
-    shape: Option<EShape>,
+    color: EColor,
+    shape: EShape,
 }
 
 impl SingleItem {
+    pub fn new() -> SingleItem {
+        SingleItem {
+            color: EColor::Empty,
+            shape: EShape::Empty,
+        }
+    }
+
     pub fn to_string(&self) -> String {
         match (self.shape, self.color) {
-            (Some(shape), Some(color)) => format!("{}{}", shape.to_string(), color.to_string()),
-            (Some(EShape::Pin), None) => format!("{}-", EShape::Pin.to_string()),
-            _ => "--".to_string(),
+            (EShape::Empty, EColor::Empty) => "--".to_string(),
+            (EShape::Pin, _) => format!("{}-", self.shape.to_string()),
+            _ => format!("{}{}", self.shape.to_string(), self.color.to_string()),
         }
     }
 
@@ -100,9 +144,18 @@ impl SingleItem {
         let color_code = &s[1..2];
 
         Some(SingleItem {
-            shape: EShape::try_from_string(shape_code),
-            color: EColor::try_from_string(color_code),
+            shape: EShape::try_from_string(shape_code)?,
+            color: EColor::try_from_string(color_code)?,
         })
+    }
+}
+
+impl Distribution<SingleItem> for rand::distributions::Standard {
+    fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> SingleItem {
+        SingleItem {
+            color: rng.gen(),
+            shape: rng.gen(),
+        }
     }
 }
 
@@ -114,11 +167,28 @@ pub struct Shape {
 impl Shape {
     pub fn new() -> Shape {
         Shape {
-            items: [[SingleItem {
-                color: None,
-                shape: None,
-            }; SHAPEZ2_DEMENTION]; SHAPEZ2_LAYER],
+            items: [[SingleItem::new(); SHAPEZ2_DEMENTION]; SHAPEZ2_LAYER],
         }
+    }
+
+    pub fn new_random() -> Shape {
+        let mut shape = Shape::new();
+        for i in 0..SHAPEZ2_LAYER {
+            for j in 0..SHAPEZ2_DEMENTION {
+                shape.items[i][j] = SingleItem {
+                    color: rand::random(),
+                    shape: rand::random(),
+                };
+
+                // if the shape is not empty, the color should not be empty
+                if shape.items[i][j].shape != EShape::Empty {
+                    while shape.items[i][j].color == EColor::Empty {
+                        shape.items[i][j].color = rand::random();
+                    }
+                }
+            }
+        }
+        shape
     }
 
     pub fn to_string(&self) -> String {
@@ -212,7 +282,7 @@ mod tests {
         assert_eq!(EColor::Green.to_string(), "g");
         assert_eq!(EColor::Blue.to_string(), "b");
         assert_eq!(EColor::Yellow.to_string(), "y");
-        assert_eq!(EColor::Purple.to_string(), "p");
+        assert_eq!(EColor::Magenta.to_string(), "p");
         assert_eq!(EColor::Cyan.to_string(), "c");
         assert_eq!(EColor::White.to_string(), "w");
         assert_eq!(EColor::Uncolored.to_string(), "u");
@@ -224,7 +294,7 @@ mod tests {
         assert_eq!(EColor::try_from_string("g"), Some(EColor::Green));
         assert_eq!(EColor::try_from_string("b"), Some(EColor::Blue));
         assert_eq!(EColor::try_from_string("y"), Some(EColor::Yellow));
-        assert_eq!(EColor::try_from_string("p"), Some(EColor::Purple));
+        assert_eq!(EColor::try_from_string("p"), Some(EColor::Magenta));
         assert_eq!(EColor::try_from_string("c"), Some(EColor::Cyan));
         assert_eq!(EColor::try_from_string("w"), Some(EColor::White));
         assert_eq!(EColor::try_from_string("u"), Some(EColor::Uncolored));
@@ -240,8 +310,8 @@ mod tests {
         );
 
         shape.items[0][0] = SingleItem {
-            color: Some(EColor::Red),
-            shape: Some(EShape::Circle),
+            color: EColor::Red,
+            shape: EShape::Circle,
         };
         assert_eq!(
             shape.to_raw_string(),
@@ -255,8 +325,8 @@ mod tests {
         assert_eq!(shape.to_string(), "".to_string());
 
         shape.items[0][0] = SingleItem {
-            color: Some(EColor::Red),
-            shape: Some(EShape::Circle),
+            color: EColor::Red,
+            shape: EShape::Circle,
         };
         assert_eq!(shape.to_string(), "Cr".to_string());
     }
@@ -264,16 +334,16 @@ mod tests {
     #[test]
     fn test_shape_try_from_string() {
         let s1 = SingleItem {
-            color: Some(EColor::Red),
-            shape: Some(EShape::Circle),
+            color: EColor::Red,
+            shape: EShape::Circle,
         };
         let s2 = SingleItem {
-            color: Some(EColor::Green),
-            shape: Some(EShape::Rectangle),
+            color: EColor::Green,
+            shape: EShape::Rectangle,
         };
         let s3 = SingleItem {
-            color: None,
-            shape: None,
+            color: EColor::Empty,
+            shape: EShape::Empty,
         };
         let shape = Shape {
             items: [[s1, s2, s3, s3]; SHAPEZ2_LAYER],
@@ -282,6 +352,15 @@ mod tests {
         assert_eq!(
             Shape::try_from_string("CrRg----:CrRg----:CrRg----:CrRg----"),
             Some(shape)
+        );
+    }
+
+    #[test]
+    fn test_new_random_shape() {
+        let shape = Shape::new_random();
+        assert_eq!(
+            shape.to_raw_string().len(),
+            2 * SHAPEZ2_LAYER * SHAPEZ2_DEMENTION + SHAPEZ2_LAYER - 1
         );
     }
 }
