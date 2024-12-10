@@ -199,6 +199,16 @@ impl Shape {
         }
     }
 
+    pub fn layer_height(&self) -> usize {
+        let mut height = 0;
+        for i in 0..SHAPEZ2_LAYER {
+            if self.items[i].iter().any(|item| item.shape != EShape::Empty) {
+                height = i + 1;
+            }
+        }
+        height
+    }
+
     pub fn new_random() -> Shape {
         let mut shape = Shape::new();
         let shape_layer = rand::random::<usize>() % SHAPEZ2_LAYER;
