@@ -125,8 +125,8 @@ impl Distribution<EShape> for rand::distributions::Standard {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct SingleItem {
-    color: EColor,
-    shape: EShape,
+    pub color: EColor,
+    pub shape: EShape,
 }
 
 impl Default for SingleItem {

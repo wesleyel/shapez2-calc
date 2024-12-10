@@ -1,11 +1,12 @@
-use std::collections::{HashSet, VecDeque};
-
 use shapez2_calc::{
     cutting::{Cuttable, Swapable},
     rotate::Rotatable,
-    shape::{EColor, EShape, Shape},
+    shape::{EColor, EShape, Shape, SHAPEZ2_DEMENTION, SHAPEZ2_LAYER},
     stack::Stackable,
 };
+use std::cmp::Ordering;
+use std::collections::BinaryHeap;
+use std::collections::HashSet;
 
 pub fn basic_shapes() -> [Shape; 36] {
     let mut shapes = [Shape::default(); 36];
@@ -36,63 +37,141 @@ pub fn basic_shapes() -> [Shape; 36] {
     shapes
 }
 
-fn bfs(start_shapes: &[Shape], goal: &Shape) -> Option<Vec<Shape>> {
-    let mut queue = VecDeque::new();
-    let mut visited = HashSet::new();
+#[derive(Clone, Eq, PartialEq)]
+struct State {
+    shape: Shape,
+    path: Vec<Shape>,
+    cost: usize,
+    heuristic: usize,
+}
+
+impl Ord for State {
+    fn cmp(&self, other: &Self) -> Ordering {
+        (other.cost + other.heuristic).cmp(&(self.cost + self.heuristic))
+    }
+}
+
+impl PartialOrd for State {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+fn heuristic(shape: &Shape, goal: &Shape) -> usize {
+    let mut count = 0;
+    for i in 0..SHAPEZ2_LAYER {
+        for j in 0..SHAPEZ2_DEMENTION {
+            let item_s = shape.items[i][j];
+            let item_g = goal.items[i][j];
+            if item_s.shape == item_g.shape {
+                count += 1;
+            }
+            if item_s.color == item_g.color {
+                count += 1;
+            }
+        }
+    }
+    count
+}
+
+fn a_star(start_shapes: &[Shape], goal: &Shape) -> Option<Vec<Shape>> {
+    let mut open_set = BinaryHeap::new();
+    let mut closed_set = HashSet::new();
 
     for shape in start_shapes {
-        queue.push_back((shape.clone(), vec![shape.clone()]));
-        visited.insert(shape.clone());
+        let initial_state = State {
+            shape: shape.clone(),
+            path: vec![shape.clone()],
+            cost: 0,
+            heuristic: heuristic(shape, goal),
+        };
+        open_set.push(initial_state);
     }
 
-    while let Some((current, path)) = queue.pop_front() {
-        if current == *goal {
-            return Some(path);
+    let mut cnt = 0;
+
+    while let Some(current) = open_set.pop() {
+        if current.shape == *goal {
+            return Some(current.path);
         }
 
+        if closed_set.contains(&current.shape) {
+            continue;
+        }
+        closed_set.insert(current.shape.clone());
+
         let new_states = vec![
-            current.rotate_once(),
-            current.rotate_once_reverse(),
-            current.rotate_180(),
-            current.cutting()[0],
-            current.cutting()[1],
+            current.shape.rotate_once(),
+            current.shape.rotate_once_reverse(),
+            current.shape.rotate_180(),
+            current.shape.cutting()[0],
+            current.shape.cutting()[1],
         ];
 
         for new_state in new_states {
-            if !visited.contains(&new_state) {
-                let mut new_path = path.clone();
+            if !closed_set.contains(&new_state) {
+                let mut new_path = current.path.clone();
                 new_path.push(new_state.clone());
-                queue.push_back((new_state, new_path));
-                visited.insert(new_state);
+                let new_cost = current.cost + 1; // 假设每个操作的代价为1
+                let new_heuristic = heuristic(&new_state, goal);
+                let next_state = State {
+                    shape: new_state,
+                    path: new_path,
+                    cost: new_cost,
+                    heuristic: new_heuristic,
+                };
+                open_set.push(next_state);
             }
         }
 
         for shape in start_shapes {
-            let [swap_a, swap_b] = current.swap_with(shape);
-            if !visited.contains(&swap_a) {
-                let mut new_path = path.clone();
+            let [swap_a, swap_b] = current.shape.swap_with(shape);
+            if !closed_set.contains(&swap_a) {
+                let mut new_path = current.path.clone();
                 new_path.push(swap_a.clone());
-                queue.push_back((swap_a, new_path));
-                visited.insert(swap_a);
+                let new_cost = current.cost + 1;
+                let new_heuristic = heuristic(&swap_a, goal);
+                let next_state = State {
+                    shape: swap_a,
+                    path: new_path,
+                    cost: new_cost,
+                    heuristic: new_heuristic,
+                };
+                open_set.push(next_state);
             }
-            if !visited.contains(&swap_b) {
-                let mut new_path = path.clone();
+            if !closed_set.contains(&swap_b) {
+                let mut new_path = current.path.clone();
                 new_path.push(swap_b.clone());
-                queue.push_back((swap_b, new_path));
-                visited.insert(swap_b);
+                let new_cost = current.cost + 1;
+                let new_heuristic = heuristic(&swap_b, goal);
+                let next_state = State {
+                    shape: swap_b,
+                    path: new_path,
+                    cost: new_cost,
+                    heuristic: new_heuristic,
+                };
+                open_set.push(next_state);
             }
 
-            let stacked = current.stack_with(shape);
-            if !visited.contains(&stacked) {
-                let mut new_path = path.clone();
+            let stacked = current.shape.stack_with(shape);
+            if !closed_set.contains(&stacked) {
+                let mut new_path = current.path.clone();
                 new_path.push(stacked.clone());
-                queue.push_back((stacked, new_path));
-                visited.insert(stacked);
+                let new_cost = current.cost + 1;
+                let new_heuristic = heuristic(&stacked, goal);
+                let next_state = State {
+                    shape: stacked,
+                    path: new_path,
+                    cost: new_cost,
+                    heuristic: new_heuristic,
+                };
+                open_set.push(next_state);
             }
         }
 
-        if visited.len() % 1000 == 0 {
-            eprintln!("Visited: {}", visited.len());
+        cnt += 1;
+        if cnt % 1000 == 0 {
+            eprintln!("cnt: {}", cnt);
         }
     }
 
@@ -111,7 +190,7 @@ fn main() {
         eprintln!("Avaliable shape: {}", shape,);
     });
 
-    if let Some(path) = bfs(&avaliable_shapes, &goal_shape) {
+    if let Some(path) = a_star(&avaliable_shapes, &goal_shape) {
         println!("find path: {:?}", path);
     } else {
         println!("No path found");
