@@ -1,8 +1,6 @@
-use std::{
-    fmt::Display,
-    ops::{Index, IndexMut},
-};
+use std::fmt::Display;
 
+use derive_more::derive::{Index, IndexMut, IntoIterator};
 use rand::prelude::Distribution;
 
 pub const SHAPEZ2_DEMENTION: usize = 4;
@@ -177,8 +175,11 @@ impl Distribution<SingleItem> for rand::distributions::Standard {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Index, IndexMut, IntoIterator, Default)]
 pub struct SingleLayer {
+    #[index]
+    #[index_mut]
+    #[into_iterator(owned, ref, ref_mut)]
     pub items: [SingleItem; SHAPEZ2_DEMENTION],
 }
 
@@ -210,12 +211,6 @@ impl SingleLayer {
     }
 }
 
-impl Default for SingleLayer {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 impl Display for SingleLayer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for item in self.items.iter() {
@@ -225,45 +220,39 @@ impl Display for SingleLayer {
     }
 }
 
-impl Index<usize> for SingleLayer {
-    type Output = SingleItem;
-
-    fn index(&self, index: usize) -> &Self::Output {
-        &self.items[index]
-    }
-}
-
-impl IndexMut<usize> for SingleLayer {
-    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        &mut self.items[index]
-    }
-}
-
 impl Distribution<SingleLayer> for rand::distributions::Standard {
     fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> SingleLayer {
-        let mut items = [SingleItem::new(); SHAPEZ2_DEMENTION];
-        for item in items.iter_mut().take(SHAPEZ2_DEMENTION) {
-            *item = match rand::random::<usize>() % 2 {
-                0 => SingleItem {
-                    color: EColor::Empty,
-                    shape: EShape::Empty,
-                },
-                _ => rng.gen(),
-            };
+        fn generate_single_layer<R: rand::Rng + ?Sized>(rng: &mut R) -> SingleLayer {
+            let mut items = [SingleItem::new(); SHAPEZ2_DEMENTION];
+            for item in items.iter_mut().take(SHAPEZ2_DEMENTION) {
+                *item = match rand::random::<usize>() % 2 {
+                    0 => SingleItem {
+                        color: EColor::Empty,
+                        shape: EShape::Empty,
+                    },
+                    _ => rng.gen(),
+                };
 
-            // if the shape is not empty, the color should not be empty
-            if item.shape != EShape::Empty {
-                while item.color == EColor::Empty {
-                    item.color = rand::random();
+                // if the shape is not empty, the color should not be empty
+                if item.shape != EShape::Empty {
+                    while item.color == EColor::Empty {
+                        item.color = rand::random();
+                    }
+                }
+
+                // if the shape is Pin, the color should be empty
+                if item.shape == EShape::Pin {
+                    item.color = EColor::Empty;
                 }
             }
-
-            // if the shape is Pin, the color should be empty
-            if item.shape == EShape::Pin {
-                item.color = EColor::Empty;
+            SingleLayer { items }
+        }
+        loop {
+            let layer = generate_single_layer(rng);
+            if layer.is_some() {
+                return layer;
             }
         }
-        SingleLayer { items }
     }
 }
 
@@ -275,15 +264,12 @@ impl Distribution<SingleLayer> for rand::distributions::Standard {
 ///   -----
 ///   2 | 1
 /// ```
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Index, IndexMut, IntoIterator, Default)]
 pub struct Shape {
+    #[index]
+    #[index_mut]
+    #[into_iterator(owned, ref, ref_mut)]
     pub items: [SingleLayer; SHAPEZ2_LAYER],
-}
-
-impl Default for Shape {
-    fn default() -> Self {
-        Self::new()
-    }
 }
 
 impl Shape {
@@ -304,13 +290,14 @@ impl Shape {
     }
 
     pub fn random() -> Shape {
-        let shape_layer = rand::random::<usize>() % SHAPEZ2_LAYER;
+        let shape_layer = rand::random::<usize>() % (SHAPEZ2_LAYER + 1);
         Self::random_with_height(shape_layer)
     }
 
+    /// start from 1
     pub fn random_with_height(height: usize) -> Shape {
         let mut shape = Shape::new();
-        for i in 0..=height {
+        for i in 0..height {
             shape.items[i] = rand::random();
         }
         shape
@@ -388,20 +375,6 @@ impl Shape {
 impl Display for Shape {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.to_minify_string())
-    }
-}
-
-impl Index<usize> for Shape {
-    type Output = SingleLayer;
-
-    fn index(&self, index: usize) -> &Self::Output {
-        &self.items[index]
-    }
-}
-
-impl IndexMut<usize> for Shape {
-    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        &mut self.items[index]
     }
 }
 

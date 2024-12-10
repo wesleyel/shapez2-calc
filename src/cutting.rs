@@ -17,7 +17,7 @@ impl HalfDestroyable for Shape {
         for i in 0..SHAPEZ2_LAYER {
             for j in 0..SHAPEZ2_DEMENTION {
                 if j * 2 / SHAPEZ2_DEMENTION > 0 {
-                    self.items[i][j] = SingleItem::new();
+                    self[i][j] = SingleItem::new();
                 }
             }
         }

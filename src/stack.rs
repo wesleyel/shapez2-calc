@@ -22,9 +22,7 @@ impl Stackable for Shape {
         let ori_layer_height = self.layer_height();
         let layer_needed = SHAPEZ2_LAYER - ori_layer_height;
         for i in 0..layer_needed {
-            for j in 0..SHAPEZ2_DEMENTION {
-                self.items[ori_layer_height + i][j] = other_on_top.items[i][j];
-            }
+            self[ori_layer_height + i] = other_on_top[i];
         }
     }
 }
@@ -36,20 +34,15 @@ mod tests {
 
     #[test]
     fn test_stack() {
-        let bot = Shape::random_with_height(2);
-        let top = Shape::random_with_height(2);
+        let layer_height = 2;
+        let bot = Shape::random_with_height(layer_height);
+        let top = Shape::random_with_height(SHAPEZ2_DEMENTION - layer_height);
         let new_shape = Shape::stack(&bot, &top);
-        eprintln!("{}", bot.to_shapez2_shape_viewer());
-        eprintln!("{}", top.to_shapez2_shape_viewer());
-        eprintln!("{}", new_shape.to_shapez2_shape_viewer());
-
         for i in 0..SHAPEZ2_LAYER {
-            for j in 0..SHAPEZ2_DEMENTION {
-                if i < SHAPEZ2_LAYER - 1 {
-                    assert_eq!(new_shape.items[i][j], bot.items[i][j]);
-                } else {
-                    assert_eq!(new_shape.items[i][j], top.items[i - SHAPEZ2_LAYER + 1][j]);
-                }
+            if i < layer_height {
+                assert_eq!(new_shape.items[i], bot.items[i]);
+            } else {
+                assert_eq!(new_shape.items[i], top.items[i - layer_height]);
             }
         }
     }

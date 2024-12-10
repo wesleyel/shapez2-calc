@@ -36,13 +36,12 @@ pub trait Rotatable: Sized + Copy {
 impl Rotatable for Shape {
     fn rotate_once(&self) -> Shape {
         let mut shape = *self;
-        let mut new_items = Shape::new().items;
+        let ori_shape = *self;
         for i in 0..SHAPEZ2_LAYER {
-            for (j, item) in new_items.iter_mut().enumerate().take(SHAPEZ2_DEMENTION) {
-                item[SHAPEZ2_DEMENTION - 1 - i] = self.items[i][j];
+            for j in 0..SHAPEZ2_DEMENTION {
+                shape.items[j][SHAPEZ2_DEMENTION - 1 - i] = ori_shape.items[i][j];
             }
         }
-        shape.items = new_items;
         shape
     }
 

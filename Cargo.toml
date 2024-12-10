@@ -8,6 +8,7 @@ name = "shapez2-calc"
 path = "src/main.rs"
 
 [dependencies]
+derive_more = { version = "1", features = ["full"] }
 rand = "0.8.5"
 urlencoding = "2.1.3"
 
