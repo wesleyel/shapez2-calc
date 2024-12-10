@@ -131,16 +131,16 @@ pub struct SingleItem {
 
 impl Default for SingleItem {
     fn default() -> Self {
-        Self::new()
+        SingleItem {
+            color: EColor::Empty,
+            shape: EShape::Empty,
+        }
     }
 }
 
 impl SingleItem {
     pub fn new() -> SingleItem {
-        SingleItem {
-            color: EColor::Empty,
-            shape: EShape::Empty,
-        }
+        Self::default()
     }
 
     pub fn try_from_string(s: &str) -> Option<SingleItem> {
@@ -184,14 +184,26 @@ pub struct SingleLayer {
 }
 
 impl SingleLayer {
-    pub fn new() -> SingleLayer {
-        SingleLayer {
-            items: [SingleItem::new(); SHAPEZ2_DEMENTION],
+    pub fn new_with_shape(shape: EShape) -> SingleLayer {
+        let layer = Self::default();
+        for mut item in layer.into_iter() {
+            item.shape = shape;
+            item.color = EColor::Uncolored;
         }
+        layer
+    }
+
+    pub fn new_with_shape_color(shape: EShape, color: EColor) -> SingleLayer {
+        let layer = Self::default();
+        for mut item in layer.into_iter() {
+            item.shape = shape;
+            item.color = color;
+        }
+        layer
     }
 
     pub fn try_from_string(s: &str) -> Option<SingleLayer> {
-        let mut layer = SingleLayer::new();
+        let mut layer = SingleLayer::default();
         if s.len() != SHAPEZ2_DEMENTION * 2 {
             return None;
         }
@@ -273,10 +285,10 @@ pub struct Shape {
 }
 
 impl Shape {
-    pub fn new() -> Shape {
-        Shape {
-            items: [SingleLayer::new(); SHAPEZ2_LAYER],
-        }
+    pub fn new_simple(shape: EShape, color: EColor) -> Shape {
+        let mut shape_s = Shape::default();
+        shape_s[0] = SingleLayer::new_with_shape_color(shape, color);
+        shape_s
     }
 
     pub fn layer_height(&self) -> usize {
@@ -296,7 +308,7 @@ impl Shape {
 
     /// start from 1
     pub fn random_with_height(height: usize) -> Shape {
-        let mut shape = Shape::new();
+        let mut shape = Shape::default();
         for i in 0..height {
             shape.items[i] = rand::random();
         }
@@ -344,7 +356,7 @@ impl Shape {
     }
 
     pub fn try_from_string(s: &str) -> Option<Shape> {
-        let mut shape = Shape::new();
+        let mut shape = Shape::default();
 
         let layer_strings: Vec<&str> = s.split(':').collect();
 
@@ -411,8 +423,27 @@ mod tests {
     }
 
     #[test]
+    fn test_default() {
+        let item = SingleItem::default();
+        assert_eq!(item.color, EColor::Empty);
+        assert_eq!(item.shape, EShape::Empty);
+
+        let layer = SingleLayer::default();
+        for item in layer.items.iter() {
+            assert_eq!(*item, SingleItem::default());
+        }
+
+        let shape = Shape::default();
+        for layer in shape.items.iter() {
+            for item in layer.items.iter() {
+                assert_eq!(*item, SingleItem::default());
+            }
+        }
+    }
+
+    #[test]
     fn test_shape_to_raw_string() {
-        let mut shape = Shape::new();
+        let mut shape = Shape::default();
         assert_eq!(
             shape.to_raw_string(),
             "--------:--------:--------:--------".to_string()
@@ -430,7 +461,7 @@ mod tests {
 
     #[test]
     fn test_shape_to_string() {
-        let mut shape = Shape::new();
+        let mut shape = Shape::default();
         assert_eq!(shape.to_minify_string(), "".to_string());
 
         shape[0][0] = SingleItem {

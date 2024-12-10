@@ -47,13 +47,12 @@ impl Rotatable for Shape {
 
     fn rotate_once_reverse(&self) -> Shape {
         let mut shape = *self;
-        let mut new_items = Shape::new().items;
+        let ori_shape = *self;
         for i in 0..SHAPEZ2_LAYER {
             for j in 0..SHAPEZ2_DEMENTION {
-                new_items[SHAPEZ2_DEMENTION - 1 - j][i] = self.items[i][j];
+                shape.items[SHAPEZ2_DEMENTION - 1 - j][i] = ori_shape.items[i][j];
             }
         }
-        shape.items = new_items;
         shape
     }
 }

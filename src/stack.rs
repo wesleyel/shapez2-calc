@@ -1,4 +1,4 @@
-use crate::shape::{Shape, SHAPEZ2_DEMENTION, SHAPEZ2_LAYER};
+use crate::shape::{Shape, SHAPEZ2_LAYER};
 
 pub trait Stackable: Sized + Copy {
     fn stacked_with(&mut self, other_on_top: &Self);
@@ -29,6 +29,8 @@ impl Stackable for Shape {
 
 #[cfg(test)]
 mod tests {
+    use crate::shape::SHAPEZ2_DEMENTION;
+
     use super::*;
     use pretty_assertions::assert_eq;
 
