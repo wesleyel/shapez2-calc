@@ -131,7 +131,6 @@ impl SingleItem {
     pub fn to_string(&self) -> String {
         match (self.shape, self.color) {
             (EShape::Empty, EColor::Empty) => "--".to_string(),
-            (EShape::Pin, _) => format!("{}-", self.shape.to_string()),
             _ => format!("{}{}", self.shape.to_string(), self.color.to_string()),
         }
     }
@@ -173,11 +172,18 @@ impl Shape {
 
     pub fn new_random() -> Shape {
         let mut shape = Shape::new();
-        for i in 0..SHAPEZ2_LAYER {
+        let shape_layer = rand::random::<usize>() % SHAPEZ2_LAYER;
+        for i in 0..=shape_layer {
             for j in 0..SHAPEZ2_DEMENTION {
-                shape.items[i][j] = SingleItem {
-                    color: rand::random(),
-                    shape: rand::random(),
+                shape.items[i][j] = match rand::random::<usize>() % 2 {
+                    0 => SingleItem {
+                        color: EColor::Empty,
+                        shape: EShape::Empty,
+                    },
+                    _ => SingleItem {
+                        color: rand::random(),
+                        shape: rand::random(),
+                    },
                 };
 
                 // if the shape is not empty, the color should not be empty
@@ -196,13 +202,11 @@ impl Shape {
         const EMPTY_LAYER: &str = ":--------";
         const EMPTY_ITEM: &str = "--";
         // search from right to left, when meet ":--------" remove it
-        let mut index = result.len();
-        while index > 2 * SHAPEZ2_DEMENTION {
-            if &result[index - EMPTY_LAYER.len()..index] == EMPTY_LAYER {
-                result = result[0..index - EMPTY_LAYER.len()].to_string();
-                index -= EMPTY_LAYER.len();
+        loop {
+            if result.ends_with(EMPTY_LAYER) {
+                result = result[0..result.len() - EMPTY_LAYER.len()].to_string();
             } else {
-                index -= 1;
+                break;
             }
         }
         // if : at the end, remove it
@@ -211,13 +215,11 @@ impl Shape {
         }
         // if : not present, search from left to right, when meet "--" remove it
         if !result.contains(":") {
-            let mut index = 0;
-            while index < result.len() {
-                if &result[index..index + EMPTY_ITEM.len()] == EMPTY_ITEM {
-                    result = result[0..index].to_string();
-                    break;
+            loop {
+                if result.ends_with(EMPTY_ITEM) {
+                    result = result[0..result.len() - EMPTY_ITEM.len()].to_string();
                 } else {
-                    index += 1;
+                    break;
                 }
             }
         }
@@ -275,6 +277,7 @@ impl Shape {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn test_color_to_string() {
@@ -282,10 +285,11 @@ mod tests {
         assert_eq!(EColor::Green.to_string(), "g");
         assert_eq!(EColor::Blue.to_string(), "b");
         assert_eq!(EColor::Yellow.to_string(), "y");
-        assert_eq!(EColor::Magenta.to_string(), "p");
+        assert_eq!(EColor::Magenta.to_string(), "m");
         assert_eq!(EColor::Cyan.to_string(), "c");
         assert_eq!(EColor::White.to_string(), "w");
         assert_eq!(EColor::Uncolored.to_string(), "u");
+        assert_eq!(EColor::Empty.to_string(), "-");
     }
 
     #[test]
@@ -294,10 +298,11 @@ mod tests {
         assert_eq!(EColor::try_from_string("g"), Some(EColor::Green));
         assert_eq!(EColor::try_from_string("b"), Some(EColor::Blue));
         assert_eq!(EColor::try_from_string("y"), Some(EColor::Yellow));
-        assert_eq!(EColor::try_from_string("p"), Some(EColor::Magenta));
+        assert_eq!(EColor::try_from_string("m"), Some(EColor::Magenta));
         assert_eq!(EColor::try_from_string("c"), Some(EColor::Cyan));
         assert_eq!(EColor::try_from_string("w"), Some(EColor::White));
         assert_eq!(EColor::try_from_string("u"), Some(EColor::Uncolored));
+        assert_eq!(EColor::try_from_string("-"), Some(EColor::Empty));
         assert_eq!(EColor::try_from_string("x"), None);
     }
 
@@ -362,5 +367,19 @@ mod tests {
             shape.to_raw_string().len(),
             2 * SHAPEZ2_LAYER * SHAPEZ2_DEMENTION + SHAPEZ2_LAYER - 1
         );
+    }
+
+    #[test]
+    fn test_ramdom_shape_loopback_raw_string() {
+        let shape = Shape::new_random();
+        let shape_str = shape.to_raw_string();
+        assert_eq!(Shape::try_from_string(&shape_str), Some(shape));
+    }
+
+    #[test]
+    fn test_ramdom_shape_loopback_minify_string() {
+        let shape = Shape::new_random();
+        let shape_str = shape.to_string();
+        assert_eq!(Shape::try_from_string(&shape_str), Some(shape));
     }
 }
