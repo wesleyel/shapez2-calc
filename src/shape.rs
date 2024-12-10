@@ -158,7 +158,7 @@ impl Distribution<SingleItem> for rand::distributions::Standard {
     }
 }
 /// Shape is a 4x4 matrix of SingleItem
-/// 
+///
 /// ```plaintext
 ///  Layer 0
 ///   3 | 0

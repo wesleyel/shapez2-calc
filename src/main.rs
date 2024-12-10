@@ -1,6 +1,5 @@
 use shapez2_calc::shape::Shape;
 
-
 fn main() {
     for _ in 0..10 {
         let shape = Shape::new_random();
