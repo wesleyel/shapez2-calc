@@ -1,6 +1,7 @@
-use types::Shape;
+use shape::Shape;
 
-mod types;
+mod rotate;
+mod shape;
 
 fn main() {
     for _ in 0..10 {

@@ -1,7 +1,7 @@
 use rand::prelude::Distribution;
 
-const SHAPEZ2_DEMENTION: usize = 4;
-const SHAPEZ2_LAYER: usize = 4;
+pub const SHAPEZ2_DEMENTION: usize = 4;
+pub const SHAPEZ2_LAYER: usize = 4;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EColor {
@@ -160,7 +160,7 @@ impl Distribution<SingleItem> for rand::distributions::Standard {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Shape {
-    items: [[SingleItem; SHAPEZ2_DEMENTION]; SHAPEZ2_LAYER],
+    pub items: [[SingleItem; SHAPEZ2_DEMENTION]; SHAPEZ2_LAYER],
 }
 
 impl Shape {
