@@ -1,3 +1,6 @@
+const SHAPEZ2_DEMENTION: usize = 4;
+const SHAPEZ2_LAYER: usize = 4;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EColor {
     Red,
@@ -36,7 +39,7 @@ impl EColor {
             "c" => Some(EColor::Cyan),
             "w" => Some(EColor::White),
             "k" => Some(EColor::Black),
-            "u" | "-" => Some(EColor::Uncolored),
+            "u" => Some(EColor::Uncolored),
             _ => None,
         }
     }
@@ -76,77 +79,113 @@ impl EShape {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SingleItem {
-    color: EColor,
-    shape: EShape,
+    color: Option<EColor>,
+    shape: Option<EShape>,
+}
+
+impl SingleItem {
+    pub fn to_string(&self) -> String {
+        match (self.shape, self.color) {
+            (Some(shape), Some(color)) => format!("{}{}", shape.to_string(), color.to_string()),
+            (Some(EShape::Pin), None) => format!("{}-", EShape::Pin.to_string()),
+            _ => "--".to_string(),
+        }
+    }
+
+    pub fn try_from_string(s: &str) -> Option<SingleItem> {
+        if s.len() != 2 {
+            return None;
+        }
+        let shape_code = &s[0..1];
+        let color_code = &s[1..2];
+
+        Some(SingleItem {
+            shape: EShape::try_from_string(shape_code),
+            color: EColor::try_from_string(color_code),
+        })
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Shape {
-    items: [[Option<SingleItem>; 4]; 4],
+    items: [[SingleItem; SHAPEZ2_DEMENTION]; SHAPEZ2_LAYER],
 }
 
 impl Shape {
+    pub fn new() -> Shape {
+        Shape {
+            items: [[SingleItem {
+                color: None,
+                shape: None,
+            }; SHAPEZ2_DEMENTION]; SHAPEZ2_LAYER],
+        }
+    }
+
     pub fn to_string(&self) -> String {
-        let mut result = String::new();
-        // Find the highest non-empty layer
-        let mut highest_non_empty_layer = None;
-        for i in (0..4).rev() {
-            if self.items[i].iter().any(|item| item.is_some()) {
-                highest_non_empty_layer = Some(i);
-                break;
+        let mut result = self.to_raw_string();
+        const EMPTY_LAYER: &str = ":--------";
+        const EMPTY_ITEM: &str = "--";
+        // search from right to left, when meet ":--------" remove it
+        let mut index = result.len();
+        while index > 2 * SHAPEZ2_DEMENTION {
+            if &result[index - EMPTY_LAYER.len()..index] == EMPTY_LAYER {
+                result = result[0..index - EMPTY_LAYER.len()].to_string();
+                index -= EMPTY_LAYER.len();
+            } else {
+                index -= 1;
             }
         }
-        if let Some(max_layer) = highest_non_empty_layer {
-            for i in 0..=max_layer {
-                for j in 0..4 {
-                    match &self.items[i][j] {
-                        Some(item) => {
-                            result.push_str(&item.shape.to_string());
-                            result.push_str(&item.color.to_string());
-                        }
-                        None => {
-                            result.push_str("--");
-                        }
-                    }
-                }
-                if i != max_layer {
-                    result.push_str(":");
+        // if : at the end, remove it
+        if result.ends_with(":") {
+            result = result[0..result.len() - 1].to_string();
+        }
+        // if : not present, search from left to right, when meet "--" remove it
+        if !result.contains(":") {
+            let mut index = 0;
+            while index < result.len() {
+                if &result[index..index + EMPTY_ITEM.len()] == EMPTY_ITEM {
+                    result = result[0..index].to_string();
+                    break;
+                } else {
+                    index += 1;
                 }
             }
         }
         result
     }
 
+    pub fn to_raw_string(&self) -> String {
+        let mut result = String::new();
+        for i in 0..SHAPEZ2_LAYER {
+            for j in 0..SHAPEZ2_DEMENTION {
+                result.push_str(&self.items[i][j].to_string());
+            }
+            if i != SHAPEZ2_LAYER - 1 {
+                result.push_str(":");
+            }
+        }
+        result
+    }
+
     pub fn try_from_string(s: &str) -> Option<Shape> {
-        let mut shape = Shape {
-            items: [[None; 4]; 4],
-        };
+        let mut shape = Shape::new();
 
         let layer_strings: Vec<&str> = s.split(':').collect();
 
-        if layer_strings.len() > 4 {
+        if layer_strings.len() > SHAPEZ2_LAYER {
             return None;
         }
 
         for (layer_index, layer_str) in layer_strings.iter().enumerate() {
-            if layer_str.len() != 8 {
+            if layer_str.len() != SHAPEZ2_DEMENTION * 2 {
                 return None;
             }
-            for quadrant_index in 0..4 {
+            for quadrant_index in 0..SHAPEZ2_DEMENTION {
                 let code = &layer_str[quadrant_index * 2..quadrant_index * 2 + 2];
-                if code == "--" {
-                    shape.items[layer_index][quadrant_index] = None;
+                if let Some(item) = SingleItem::try_from_string(code) {
+                    shape.items[layer_index][quadrant_index] = item;
                 } else {
-                    let shape_code = &code[0..1];
-                    let color_code = &code[1..2];
-
-                    let shape_enum = EShape::try_from_string(shape_code)?;
-                    let color_enum = EColor::try_from_string(color_code)?;
-
-                    shape.items[layer_index][quadrant_index] = Some(SingleItem {
-                        color: color_enum,
-                        shape: shape_enum,
-                    });
+                    return None;
                 }
             }
         }
@@ -193,89 +232,55 @@ mod tests {
     }
 
     #[test]
-    fn test_shape_to_string() {
-        let shape = Shape {
-            items: [
-                [
-                    Some(SingleItem {
-                        color: EColor::Red,
-                        shape: EShape::Circle,
-                    }),
-                    Some(SingleItem {
-                        color: EColor::Green,
-                        shape: EShape::Rectangle,
-                    }),
-                    None,
-                    None,
-                ],
-                [
-                    None,
-                    None,
-                    Some(SingleItem {
-                        color: EColor::Blue,
-                        shape: EShape::Windmill,
-                    }),
-                    None,
-                ],
-                [
-                    None,
-                    None,
-                    None,
-                    Some(SingleItem {
-                        color: EColor::Yellow,
-                        shape: EShape::Star,
-                    }),
-                ],
-                [None, None, None, None],
-            ],
-        };
-
+    fn test_shape_to_raw_string() {
+        let mut shape = Shape::new();
         assert_eq!(
-            shape.to_string(),
-            "CrRg----:----Wb--:------Sy".to_string(),
+            shape.to_raw_string(),
+            "--------:--------:--------:--------".to_string()
+        );
+
+        shape.items[0][0] = SingleItem {
+            color: Some(EColor::Red),
+            shape: Some(EShape::Circle),
+        };
+        assert_eq!(
+            shape.to_raw_string(),
+            "Cr------:--------:--------:--------".to_string()
         );
     }
 
     #[test]
+    fn test_shape_to_string() {
+        let mut shape = Shape::new();
+        assert_eq!(shape.to_string(), "".to_string());
+
+        shape.items[0][0] = SingleItem {
+            color: Some(EColor::Red),
+            shape: Some(EShape::Circle),
+        };
+        assert_eq!(shape.to_string(), "Cr".to_string());
+    }
+
+    #[test]
     fn test_shape_try_from_string() {
+        let s1 = SingleItem {
+            color: Some(EColor::Red),
+            shape: Some(EShape::Circle),
+        };
+        let s2 = SingleItem {
+            color: Some(EColor::Green),
+            shape: Some(EShape::Rectangle),
+        };
+        let s3 = SingleItem {
+            color: None,
+            shape: None,
+        };
         let shape = Shape {
-            items: [
-                [
-                    Some(SingleItem {
-                        color: EColor::Red,
-                        shape: EShape::Circle,
-                    }),
-                    Some(SingleItem {
-                        color: EColor::Green,
-                        shape: EShape::Rectangle,
-                    }),
-                    None,
-                    None,
-                ],
-                [
-                    None,
-                    None,
-                    Some(SingleItem {
-                        color: EColor::Blue,
-                        shape: EShape::Windmill,
-                    }),
-                    None,
-                ],
-                [
-                    None,
-                    None,
-                    None,
-                    Some(SingleItem {
-                        color: EColor::Yellow,
-                        shape: EShape::Star,
-                    }),
-                ],
-                [None, None, None, None],
-            ],
+            items: [[s1, s2, s3, s3]; SHAPEZ2_LAYER],
         };
 
         assert_eq!(
-            Shape::try_from_string("CrRg----:----Wb--:------Sy"),
+            Shape::try_from_string("CrRg----:CrRg----:CrRg----:CrRg----"),
             Some(shape)
         );
     }
