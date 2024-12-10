@@ -3,9 +3,13 @@ use crate::{
     shape::{Shape, SingleItem, SHAPEZ2_DEMENTION, SHAPEZ2_LAYER},
 };
 
-pub trait HalfDestroyable {
+pub trait HalfDestroyable: Sized + Copy {
     fn half_destroyed(&mut self);
-    fn half_destroy(&self) -> Self;
+    fn half_destroy(&self) -> Self {
+        let mut shape = *self;
+        shape.half_destroyed();
+        shape
+    }
 }
 
 impl HalfDestroyable for Shape {
@@ -18,18 +22,10 @@ impl HalfDestroyable for Shape {
             }
         }
     }
-
-    fn half_destroy(&self) -> Self {
-        let mut shape = *self;
-        shape.half_destroyed();
-        shape
-    }
 }
 
-pub trait Cuttable {
-    fn cutting(&self) -> [Self; 2]
-    where
-        Self: Sized;
+pub trait Cuttable: Sized + Copy {
+    fn cutting(&self) -> [Self; 2];
 }
 
 impl Cuttable for Shape {
@@ -40,15 +36,20 @@ impl Cuttable for Shape {
     }
 }
 
-pub trait Swapable {
+pub trait Swapable: Sized + Copy {
     fn swapd(a: &mut Self, b: &mut Self);
-    fn swapd_with(&mut self, b: &mut Self);
-    fn swap(a: &Self, b: &Self) -> [Self; 2]
-    where
-        Self: Sized;
-    fn swap_with(&self, other: &Self) -> [Self; 2]
-    where
-        Self: Sized;
+    fn swapd_with(&mut self, b: &mut Self) {
+        Self::swapd(self, b);
+    }
+    fn swap(a: &Self, b: &Self) -> [Self; 2] {
+        let mut a = *a;
+        let mut b = *b;
+        Self::swapd(&mut a, &mut b);
+        [a, b]
+    }
+    fn swap_with(&self, other: &Self) -> [Self; 2] {
+        Self::swap(self, other)
+    }
 }
 
 impl Swapable for Shape {
@@ -64,21 +65,6 @@ impl Swapable for Shape {
             }
         }
     }
-
-    fn swapd_with(&mut self, other: &mut Self) {
-        Self::swapd(self, other);
-    }
-
-    fn swap(a: &Self, b: &Self) -> [Self; 2] {
-        let mut a = *a;
-        let mut b = *b;
-        Self::swapd(&mut a, &mut b);
-        [a, b]
-    }
-
-    fn swap_with(&self, other: &Self) -> [Shape; 2] {
-        Self::swap(self, other)
-    }
 }
 
 #[cfg(test)]
@@ -88,7 +74,7 @@ mod tests {
 
     #[test]
     fn test_half_destroy() {
-        let shape = Shape::new_random();
+        let shape = Shape::random();
         let new_shape = shape.half_destroy();
         for i in 0..SHAPEZ2_LAYER {
             for j in 0..SHAPEZ2_DEMENTION {
@@ -103,7 +89,7 @@ mod tests {
 
     #[test]
     fn test_cutting() {
-        let shape = Shape::new_random();
+        let shape = Shape::random();
         let [left_shape, right_shape] = shape.cutting();
         for i in 0..SHAPEZ2_LAYER {
             for j in 0..SHAPEZ2_DEMENTION {
@@ -120,8 +106,8 @@ mod tests {
 
     #[test]
     fn test_swap() {
-        let shape_a = Shape::new_random();
-        let shape_b = Shape::new_random();
+        let shape_a = Shape::random();
+        let shape_b = Shape::random();
         let [new_shape_a, new_shape_b] = Shape::swap(&shape_a, &shape_b);
         for i in 0..SHAPEZ2_LAYER {
             for j in 0..SHAPEZ2_DEMENTION {
@@ -138,8 +124,8 @@ mod tests {
 
     #[test]
     fn test_swap_with() {
-        let mut shape_a = Shape::new_random();
-        let mut shape_b = Shape::new_random();
+        let mut shape_a = Shape::random();
+        let mut shape_b = Shape::random();
         let [new_shape_a, new_shape_b] = shape_a.swap_with(&shape_b);
         shape_a.swapd_with(&mut shape_b);
 

@@ -1,4 +1,7 @@
-use std::fmt::Display;
+use std::{
+    fmt::Display,
+    ops::{Index, IndexMut},
+};
 
 use rand::prelude::Distribution;
 
@@ -173,6 +176,97 @@ impl Distribution<SingleItem> for rand::distributions::Standard {
         }
     }
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SingleLayer {
+    pub items: [SingleItem; SHAPEZ2_DEMENTION],
+}
+
+impl SingleLayer {
+    pub fn new() -> SingleLayer {
+        SingleLayer {
+            items: [SingleItem::new(); SHAPEZ2_DEMENTION],
+        }
+    }
+
+    pub fn try_from_string(s: &str) -> Option<SingleLayer> {
+        let mut layer = SingleLayer::new();
+        if s.len() != SHAPEZ2_DEMENTION * 2 {
+            return None;
+        }
+        for i in 0..SHAPEZ2_DEMENTION {
+            let code = &s[i * 2..i * 2 + 2];
+            if let Some(item) = SingleItem::try_from_string(code) {
+                layer.items[i] = item;
+            } else {
+                return None;
+            }
+        }
+        Some(layer)
+    }
+
+    pub fn is_some(&self) -> bool {
+        self.items.iter().any(|item| item.shape != EShape::Empty)
+    }
+}
+
+impl Default for SingleLayer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Display for SingleLayer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for item in self.items.iter() {
+            write!(f, "{}", item)?;
+        }
+        Ok(())
+    }
+}
+
+impl Index<usize> for SingleLayer {
+    type Output = SingleItem;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.items[index]
+    }
+}
+
+impl IndexMut<usize> for SingleLayer {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.items[index]
+    }
+}
+
+impl Distribution<SingleLayer> for rand::distributions::Standard {
+    fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> SingleLayer {
+        let mut items = [SingleItem::new(); SHAPEZ2_DEMENTION];
+        for item in items.iter_mut().take(SHAPEZ2_DEMENTION) {
+            *item = match rand::random::<usize>() % 2 {
+                0 => SingleItem {
+                    color: EColor::Empty,
+                    shape: EShape::Empty,
+                },
+                _ => rng.gen(),
+            };
+
+            // if the shape is not empty, the color should not be empty
+            if item.shape != EShape::Empty {
+                while item.color == EColor::Empty {
+                    item.color = rand::random();
+                }
+            }
+
+            // if the shape is Pin, the color should be empty
+            if item.shape == EShape::Pin {
+                item.color = EColor::Empty;
+            }
+        }
+        SingleLayer { items }
+    }
+}
+
 /// Shape is a 4x4 matrix of SingleItem
 ///
 /// ```plaintext
@@ -183,7 +277,7 @@ impl Distribution<SingleItem> for rand::distributions::Standard {
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Shape {
-    pub items: [[SingleItem; SHAPEZ2_DEMENTION]; SHAPEZ2_LAYER],
+    pub items: [SingleLayer; SHAPEZ2_LAYER],
 }
 
 impl Default for Shape {
@@ -195,43 +289,29 @@ impl Default for Shape {
 impl Shape {
     pub fn new() -> Shape {
         Shape {
-            items: [[SingleItem::new(); SHAPEZ2_DEMENTION]; SHAPEZ2_LAYER],
+            items: [SingleLayer::new(); SHAPEZ2_LAYER],
         }
     }
 
     pub fn layer_height(&self) -> usize {
         let mut height = 0;
         for i in 0..SHAPEZ2_LAYER {
-            if self.items[i].iter().any(|item| item.shape != EShape::Empty) {
+            if self.items[i].is_some() {
                 height = i + 1;
             }
         }
         height
     }
 
-    pub fn new_random() -> Shape {
-        let mut shape = Shape::new();
+    pub fn random() -> Shape {
         let shape_layer = rand::random::<usize>() % SHAPEZ2_LAYER;
-        for i in 0..=shape_layer {
-            for j in 0..SHAPEZ2_DEMENTION {
-                shape.items[i][j] = match rand::random::<usize>() % 2 {
-                    0 => SingleItem {
-                        color: EColor::Empty,
-                        shape: EShape::Empty,
-                    },
-                    _ => SingleItem {
-                        color: rand::random(),
-                        shape: rand::random(),
-                    },
-                };
+        Self::random_with_height(shape_layer)
+    }
 
-                // if the shape is not empty, the color should not be empty
-                if shape.items[i][j].shape != EShape::Empty {
-                    while shape.items[i][j].color == EColor::Empty {
-                        shape.items[i][j].color = rand::random();
-                    }
-                }
-            }
+    pub fn random_with_height(height: usize) -> Shape {
+        let mut shape = Shape::new();
+        for i in 0..=height {
+            shape.items[i] = rand::random();
         }
         shape
     }
@@ -268,9 +348,7 @@ impl Shape {
     pub fn to_raw_string(&self) -> String {
         let mut result = String::new();
         for i in 0..SHAPEZ2_LAYER {
-            for j in 0..SHAPEZ2_DEMENTION {
-                result.push_str(&self.items[i][j].to_string());
-            }
+            result.push_str(&format!("{}", self.items[i]));
             if i != SHAPEZ2_LAYER - 1 {
                 result.push(':');
             }
@@ -288,16 +366,10 @@ impl Shape {
         }
 
         for (layer_index, layer_str) in layer_strings.iter().enumerate() {
-            if layer_str.len() != SHAPEZ2_DEMENTION * 2 {
+            if let Some(layer) = SingleLayer::try_from_string(layer_str) {
+                shape.items[layer_index] = layer;
+            } else {
                 return None;
-            }
-            for quadrant_index in 0..SHAPEZ2_DEMENTION {
-                let code = &layer_str[quadrant_index * 2..quadrant_index * 2 + 2];
-                if let Some(item) = SingleItem::try_from_string(code) {
-                    shape.items[layer_index][quadrant_index] = item;
-                } else {
-                    return None;
-                }
             }
         }
         Some(shape)
@@ -316,6 +388,20 @@ impl Shape {
 impl Display for Shape {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.to_minify_string())
+    }
+}
+
+impl Index<usize> for Shape {
+    type Output = SingleLayer;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.items[index]
+    }
+}
+
+impl IndexMut<usize> for Shape {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.items[index]
     }
 }
 
@@ -359,7 +445,7 @@ mod tests {
             "--------:--------:--------:--------".to_string()
         );
 
-        shape.items[0][0] = SingleItem {
+        shape[0][0] = SingleItem {
             color: EColor::Red,
             shape: EShape::Circle,
         };
@@ -374,7 +460,7 @@ mod tests {
         let mut shape = Shape::new();
         assert_eq!(shape.to_minify_string(), "".to_string());
 
-        shape.items[0][0] = SingleItem {
+        shape[0][0] = SingleItem {
             color: EColor::Red,
             shape: EShape::Circle,
         };
@@ -396,7 +482,9 @@ mod tests {
             shape: EShape::Empty,
         };
         let shape = Shape {
-            items: [[s1, s2, s3, s3]; SHAPEZ2_LAYER],
+            items: [SingleLayer {
+                items: [s1, s2, s3, s3],
+            }; SHAPEZ2_LAYER],
         };
 
         assert_eq!(
@@ -407,7 +495,7 @@ mod tests {
 
     #[test]
     fn test_new_random_shape() {
-        let shape = Shape::new_random();
+        let shape = Shape::random();
         assert_eq!(
             shape.to_raw_string().len(),
             2 * SHAPEZ2_LAYER * SHAPEZ2_DEMENTION + SHAPEZ2_LAYER - 1
@@ -416,14 +504,14 @@ mod tests {
 
     #[test]
     fn test_ramdom_shape_loopback_raw_string() {
-        let shape = Shape::new_random();
+        let shape = Shape::random();
         let shape_str = shape.to_raw_string();
         assert_eq!(Shape::try_from_string(&shape_str), Some(shape));
     }
 
     #[test]
     fn test_ramdom_shape_loopback_minify_string() {
-        let shape = Shape::new_random();
+        let shape = Shape::random();
         let shape_str = shape.to_minify_string();
         assert_eq!(Shape::try_from_string(&shape_str), Some(shape));
     }
