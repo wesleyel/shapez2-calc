@@ -1,42 +1,22 @@
 use crate::{
     rotate::Rotatable,
-    shape::{Shape, SingleItem, SHAPEZ2_DEMENTION, SHAPEZ2_LAYER},
+    shape::{Shape, SingleItem, SingleLayer, SHAPEZ2_DEMENTION, SHAPEZ2_LAYER},
 };
 
-pub trait HalfDestroyable: Sized + Copy {
+pub trait Cuttable: Sized + Copy + Rotatable {
     fn half_destroyed(&mut self);
     fn half_destroy(&self) -> Self {
         let mut shape = *self;
         shape.half_destroyed();
         shape
     }
-}
 
-impl HalfDestroyable for Shape {
-    fn half_destroyed(&mut self) {
-        for i in 0..SHAPEZ2_LAYER {
-            for j in 0..SHAPEZ2_DEMENTION {
-                if j * 2 / SHAPEZ2_DEMENTION > 0 {
-                    self[i][j] = SingleItem::new();
-                }
-            }
-        }
-    }
-}
-
-pub trait Cuttable: Sized + Copy {
-    fn cutting(&self) -> [Self; 2];
-}
-
-impl Cuttable for Shape {
     fn cutting(&self) -> [Self; 2] {
         let left_shape = self.rotate_180().half_destroy().rotate_180();
         let right_shape = self.half_destroy();
         [left_shape, right_shape]
     }
-}
 
-pub trait Swapable: Sized + Copy {
     fn swapd(a: &mut Self, b: &mut Self);
     fn swapd_with(&mut self, b: &mut Self) {
         Self::swapd(self, b);
@@ -52,16 +32,36 @@ pub trait Swapable: Sized + Copy {
     }
 }
 
-impl Swapable for Shape {
+impl Cuttable for Shape {
+    fn half_destroyed(&mut self) {
+        for i in 0..SHAPEZ2_LAYER {
+            self[i].half_destroyed();
+        }
+    }
+
+    fn swapd(a: &mut Self, b: &mut Self) {
+        for i in 0..SHAPEZ2_LAYER {
+            SingleLayer::swapd(&mut a[i], &mut b[i]);
+        }
+    }
+}
+
+impl Cuttable for SingleLayer {
+    fn half_destroyed(&mut self) {
+        for j in 0..SHAPEZ2_DEMENTION {
+            if j * 2 / SHAPEZ2_DEMENTION > 0 {
+                self.items[j] = SingleItem::default();
+            }
+        }
+    }
+
     fn swapd(a: &mut Self, b: &mut Self) {
         let ori_a = *a;
         let ori_b = *b;
-        for i in 0..SHAPEZ2_LAYER {
-            for j in 0..SHAPEZ2_DEMENTION {
-                if j * 2 / SHAPEZ2_DEMENTION > 0 {
-                    a.items[i][j] = ori_b.items[i][j];
-                    b.items[i][j] = ori_a.items[i][j];
-                }
+        for j in 0..SHAPEZ2_DEMENTION {
+            if j * 2 / SHAPEZ2_DEMENTION > 0 {
+                a.items[j] = ori_b.items[j];
+                b.items[j] = ori_a.items[j];
             }
         }
     }

@@ -1,4 +1,4 @@
-use crate::shape::{Shape, SHAPEZ2_DEMENTION, SHAPEZ2_LAYER};
+use crate::shape::{Shape, SingleLayer, SHAPEZ2_DEMENTION, SHAPEZ2_LAYER};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RotateDirection {
@@ -36,24 +36,38 @@ pub trait Rotatable: Sized + Copy {
 impl Rotatable for Shape {
     fn rotate_once(&self) -> Shape {
         let mut shape = *self;
-        let ori_shape = *self;
         for i in 0..SHAPEZ2_LAYER {
-            for j in 0..SHAPEZ2_DEMENTION {
-                shape.items[j][SHAPEZ2_DEMENTION - 1 - i] = ori_shape.items[i][j];
-            }
+            shape[i] = shape[i].rotate_once();
         }
         shape
     }
 
     fn rotate_once_reverse(&self) -> Shape {
         let mut shape = *self;
-        let ori_shape = *self;
         for i in 0..SHAPEZ2_LAYER {
-            for j in 0..SHAPEZ2_DEMENTION {
-                shape.items[SHAPEZ2_DEMENTION - 1 - j][i] = ori_shape.items[i][j];
-            }
+            shape[i] = shape[i].rotate_once_reverse();
         }
         shape
+    }
+}
+
+impl Rotatable for SingleLayer {
+    fn rotate_once(&self) -> SingleLayer {
+        let mut layer = *self;
+        let ori_layer = *self;
+        for i in 0..SHAPEZ2_DEMENTION {
+            layer.items[SHAPEZ2_DEMENTION - 1 - i] = ori_layer.items[i];
+        }
+        layer
+    }
+
+    fn rotate_once_reverse(&self) -> SingleLayer {
+        let mut layer = *self;
+        let ori_layer = *self;
+        for i in 0..SHAPEZ2_DEMENTION {
+            layer.items[i] = ori_layer.items[SHAPEZ2_DEMENTION - 1 - i];
+        }
+        layer
     }
 }
 
