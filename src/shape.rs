@@ -375,6 +375,18 @@ impl Shape {
             encoded
         )
     }
+
+    pub fn unique_flat_items(&self) -> Vec<SingleItem> {
+        let mut items = Vec::new();
+        for layer in self.items.iter() {
+            for item in layer.items.iter() {
+                if items.iter().all(|i| i != item) {
+                    items.push(*item);
+                }
+            }
+        }
+        items
+    }
 }
 
 impl Display for Shape {

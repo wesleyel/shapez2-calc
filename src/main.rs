@@ -1,39 +1,19 @@
 use shapez2_calc::{
     cutting::{Cuttable, Swapable},
     rotate::Rotatable,
-    shape::{EColor, EShape, Shape, SHAPEZ2_DEMENTION, SHAPEZ2_LAYER},
+    shape::{EColor, EShape, Shape, SingleItem, SHAPEZ2_DEMENTION, SHAPEZ2_LAYER},
     stack::Stackable,
 };
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 use std::collections::HashSet;
 
-pub fn basic_shapes() -> [Shape; 36] {
-    let mut shapes = [Shape::default(); 36];
-    let ecolors = [
-        EColor::Red,
-        EColor::Green,
-        EColor::Blue,
-        EColor::Yellow,
-        EColor::Magenta,
-        EColor::Cyan,
-        EColor::White,
-        EColor::Black,
-        EColor::Uncolored,
-    ];
-    let eshapes = [
-        EShape::Circle,
-        EShape::Rectangle,
-        EShape::Windmill,
-        EShape::Star,
-    ];
-    let mut index = 0;
-    for &color in &ecolors {
-        for &shape in &eshapes {
-            shapes[index] = Shape::new_simple(shape, color);
-            index += 1;
-        }
-    }
+pub fn needed_shapes(items: Vec<SingleItem>) -> Vec<Shape> {
+    let mut shapes = Vec::new();
+    items.iter().for_each(|item| {
+        let shape = Shape::new_simple(item.shape, item.color);
+        shapes.push(shape);
+    });
     shapes
 }
 
@@ -179,18 +159,18 @@ fn a_star(start_shapes: &[Shape], goal: &Shape) -> Option<Vec<Shape>> {
 }
 
 fn main() {
-    let avaliable_shapes = basic_shapes();
     let goal_shape = Shape::try_from_string("Sb----Wm:--CcP-P-:--P-----:--Sc--Sg").unwrap();
+    let needed_shapes = needed_shapes(goal_shape.unique_flat_items());
     eprintln!(
         "Goal shape: {}\n{}",
         goal_shape,
         goal_shape.to_shapez2_shape_viewer()
     );
-    avaliable_shapes.iter().for_each(|shape| {
-        eprintln!("Avaliable shape: {}", shape,);
+    needed_shapes.iter().for_each(|shape| {
+        eprintln!("Needed shape: {}", shape,);
     });
 
-    if let Some(path) = a_star(&avaliable_shapes, &goal_shape) {
+    if let Some(path) = a_star(&needed_shapes, &goal_shape) {
         println!("find path: {:?}", path);
     } else {
         println!("No path found");
